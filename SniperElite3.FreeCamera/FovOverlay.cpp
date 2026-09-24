@@ -9,6 +9,7 @@
 #include <mutex>
 #include <vector>
 #include <string>
+#include <cstring>
 #include <MinHook.h>
 #include <imgui.h>
 #include <backends/imgui_impl_win32.h>
@@ -38,6 +39,34 @@ bool enabled = true;
 void Log(const wchar_t* text) {
     OutputDebugStringW(text);
     OutputDebugStringW(L"\n");
+}
+
+HMODULE AcquireGameD3D11() {
+    // Use the runtime selected by the executable's import table. In particular,
+    // 3DMigoto must create/wrap the probe device itself: its hooked DXGI factory
+    // rejects devices created directly through the system D3D11 implementation.
+    const auto base = reinterpret_cast<unsigned char*>(GetModuleHandle(nullptr));
+    const auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
+    const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
+    const auto rva = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
+    if (!rva) return nullptr;
+    auto desc = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + rva);
+    for (; desc->Name; ++desc) {
+        if (_stricmp(reinterpret_cast<const char*>(base + desc->Name), "d3d11.dll")) continue;
+        if (!desc->OriginalFirstThunk) return nullptr;
+        auto names = reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + desc->OriginalFirstThunk);
+        auto imports = reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + desc->FirstThunk);
+        for (; names->u1.AddressOfData; ++names, ++imports) {
+            if (IMAGE_SNAP_BY_ORDINAL32(names->u1.Ordinal)) continue;
+            auto name = reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base + names->u1.AddressOfData);
+            if (std::strcmp(name->Name, "D3D11CreateDevice") &&
+                std::strcmp(name->Name, "D3D11CreateDeviceAndSwapChain")) continue;
+            HMODULE module = nullptr;
+            if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+                reinterpret_cast<LPCWSTR>(imports->u1.Function), &module)) return module;
+        }
+    }
+    return nullptr;
 }
 
 bool IsInput(UINT msg) {
@@ -225,13 +254,8 @@ HRESULT STDMETHODCALLTYPE PresentHook(IDXGISwapChain* swap, UINT interval, UINT 
 bool FovOverlay::IsOpen() { return opened.load(); }
 
 bool FovOverlay::Init() {
-    // Discover the real DXGI Present implementation through the system D3D11,
-    // leaving the game's local 3DMigoto d3d11.dll in place and in the call chain.
-    wchar_t system[MAX_PATH]{};
-    if (!GetSystemDirectoryW(system, MAX_PATH)) return false;
-    const std::wstring path = std::wstring(system) + L"\\d3d11.dll";
-    HMODULE d3d = LoadLibraryW(path.c_str());
-    if (!d3d) return false;
+    HMODULE d3d = AcquireGameD3D11();
+    if (!d3d) { Log(L"SE3 FreeCamera: game D3D11 import not found; overlay disabled."); return false; }
     auto create = reinterpret_cast<decltype(&D3D11CreateDeviceAndSwapChain)>(
         GetProcAddress(d3d, "D3D11CreateDeviceAndSwapChain"));
     if (!create) { FreeLibrary(d3d); return false; }
@@ -253,7 +277,7 @@ bool FovOverlay::Init() {
     const HRESULT hr = probe ? create(nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr, 0, nullptr, 0,
         D3D11_SDK_VERSION, &desc, &swap, &probeDevice, nullptr, &probeContext) : E_FAIL;
     void* presentAddress = SUCCEEDED(hr) ? (*reinterpret_cast<void***>(swap))[8] : nullptr;
-    // Retain the system runtime while the detour exists.
+    // Retain the selected runtime/proxy while the detour exists.
     bool success = false;
     if (presentAddress) {
         const auto init = MH_Initialize();
