@@ -4,6 +4,9 @@ class eSettingsManager {
 public:
 	eSettingsManager();
 	
+	int iFovMenuKey;
+	float fFovScale;
+
 	// free camera keys
 	int iFreeCameraEnableKey;
 	int iFreeCameraKeyForward;

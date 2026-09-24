@@ -1,0 +1,7 @@
+Dear ImGui v1.91.9b
+https://github.com/ocornut/imgui/tree/v1.91.9b
+Vendored core, Win32 backend, DX11 backend, and LICENSE.txt; unmodified.
+
+MinHook v1.3.4
+https://github.com/TsudaKageyu/minhook/tree/v1.3.4
+Vendored source, headers, CMake build files, and LICENSE.txt; unmodified.

@@ -1,7 +1,7 @@
 #include "framework.h"
 #include "IniReader.h"
 #include <iostream>
-#include <Windows.h>
+#include <windows.h>
 using namespace std;
 #pragma warning(disable:4996)
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;

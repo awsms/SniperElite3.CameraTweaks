@@ -17,9 +17,11 @@
 #ifndef _MEMORY_DECLS_ONLY
 
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <windows.h>
 
 #include <cstdint>
+#include <algorithm>
+#include <cstring>
 #include <cassert>
 
 #ifndef _MEMORY_NO_CRT
@@ -54,7 +56,7 @@ namespace Memory
 	inline void		Patch(AT address, std::initializer_list<uint8_t> list )
 	{
 		uint8_t* addr = reinterpret_cast<uint8_t*>(address);
-		std::copy( list.begin(), list.end(), stdext::make_checked_array_iterator(addr, list.size()) );
+		std::copy( list.begin(), list.end(), addr );
 	}
 #endif
 
@@ -117,7 +119,7 @@ namespace Memory
 	inline bool MemEquals(uintptr_t address, std::initializer_list<uint8_t> val)
 	{
 		const uint8_t* mem = reinterpret_cast<const uint8_t*>(address);
-		return std::equal( val.begin(), val.end(), stdext::make_checked_array_iterator(mem, val.size()) );
+		return std::equal( val.begin(), val.end(), mem );
 	}
 #endif
 
@@ -347,7 +349,7 @@ namespace Memory
 			template<typename AT>
 			inline void*	ReadCallFrom(AT address, ptrdiff_t offset = 0)
 			{
-				Memory::ReadCallFrom(DynBaseAddress(address), offset);
+				return Memory::ReadCallFrom(DynBaseAddress(address), offset);
 			}
 
 #ifndef _MEMORY_NO_CRT

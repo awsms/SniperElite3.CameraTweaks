@@ -1,4 +1,5 @@
 #include "core.h"
+#include "FovOverlay.h"
 #include "FreeCamera.h"
 #include "se3/Camera.h"
 #include "SettingsMgr.h"
@@ -7,22 +8,34 @@ bool FreeCamera::ms_bEnabled = false;
 
 void FreeCamera::Init()
 {
-	CreateThread(nullptr, 0, reinterpret_cast<LPTHREAD_START_ROUTINE>(Thread), nullptr, 0, nullptr);;
+	HANDLE thread = CreateThread(nullptr, 0, Thread, nullptr, 0, nullptr);
+	if (thread) CloseHandle(thread);
 }
 
-void FreeCamera::Thread()
+DWORD WINAPI FreeCamera::Thread(LPVOID)
 {
+	bool wasDown = false;
+	bool patched = false;
 	while (true)
 	{
+		DWORD foregroundPid = 0;
+		GetWindowThreadProcessId(GetForegroundWindow(), &foregroundPid);
+		const bool down = (GetAsyncKeyState(SettingsMgr->iFreeCameraEnableKey) & 0x8000) != 0;
+		const bool pressed = down && !wasDown;
+		wasDown = down;
+		if (FovOverlay::IsOpen() || foregroundPid != GetCurrentProcessId()) { Sleep(10); continue; }
 		Camera* cam = GetCamera();
-		if (GetAsyncKeyState(SettingsMgr->iFreeCameraEnableKey) & 0x1)
+		if (pressed)
 			ms_bEnabled ^= 1;
 
 		if (ms_bEnabled)
 		{
-			Nop(_addr(0x90127F), 2);
-			Nop(_addr(0x901284), 3);
-			Nop(_addr(0x90128A), 3);
+			if (!patched) {
+				Nop(_addr(0x90127F), 2);
+				Nop(_addr(0x901284), 3);
+				Nop(_addr(0x90128A), 3);
+				patched = true;
+			}
 
 			if (cam)
 			{
@@ -53,8 +66,9 @@ void FreeCamera::Thread()
 					cam->Position += right * speed * 1;
 			}
 		}
-		else
+		else if (patched)
 		{
+			patched = false;
 			Patch<short>(_addr(0x90127F), 0x189);
 			Patch<short>(_addr(0x901284), 0x4189);
 			Patch<char>(_addr(0x901284 + 2), 0x4);
