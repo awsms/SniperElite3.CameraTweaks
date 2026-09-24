@@ -1,0 +1,3 @@
+#pragma once
+#define CAMERA_TWEAKS_VERSION "2.0"
+#define CAMERA_TWEAKS_VERSION_RESOURCE 2,0,0,0

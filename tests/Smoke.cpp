@@ -89,7 +89,7 @@ int main() {
                                           &desc,&swap,&device,nullptr,&context);
     Check(SUCCEEDED(hr), "Create DX11 test device");
     if (FAILED(hr)) return 1;
-    Check(LoadLibraryW(L"SniperElite3.FreeCamera.asi") != nullptr, "Load built 32-bit ASI");
+    Check(LoadLibraryW(L"SniperElite3.CameraTweaks.asi") != nullptr, "Load built 32-bit ASI");
     bool rendered = false;
     for (int frame=0; frame<300; ++frame) {
         MSG msg;

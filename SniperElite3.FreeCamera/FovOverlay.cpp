@@ -1,4 +1,5 @@
 #include "FovOverlay.h"
+#include "Version.h"
 #include "FovControl.h"
 #include "FovModel.h"
 #include "SettingsMgr.h"
@@ -196,7 +197,7 @@ void Draw(IDXGISwapChain* swap) {
     ImGui::SetNextWindowPos(ImVec2(60, 60), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(470, 0), ImGuiCond_Always);
     bool stayOpen = true;
-    if (ImGui::Begin("FreeCamera - FOV Settings", &stayOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
+    if (ImGui::Begin("CameraTweaks " CAMERA_TWEAKS_VERSION " - FOV Settings", &stayOpen, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::TextUnformatted("Field of view");
         ImGui::TextWrapped("Pause the game before using this menu.");
         ImGui::BeginDisabled(!fov.Available());

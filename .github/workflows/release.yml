@@ -1,0 +1,76 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  win32:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Configure Win32
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A Win32
+
+      - name: Build release
+        run: cmake --build build --config Release --parallel
+
+      - name: Package and validate release
+        id: package
+        env:
+          RELEASE_TAG: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+        run: >-
+          python scripts/package-release.py
+          --binary build/Release/SniperElite3.CameraTweaks.asi
+          --output dist --tag "$env:RELEASE_TAG"
+
+      - name: Verify embedded Windows version
+        env:
+          EXPECTED_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          $version = (Get-Item build/Release/SniperElite3.CameraTweaks.asi).VersionInfo
+          if ($version.ProductVersion -ne $env:EXPECTED_VERSION -or $version.FileVersion -ne $env:EXPECTED_VERSION) {
+            throw "The ASI version resource does not match the release version."
+          }
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: CameraTweaks-v${{ steps.package.outputs.version }}-win32
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Publish release assets
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $assets = @(Get-ChildItem dist -File | ForEach-Object { $_.FullName })
+          gh release view "$env:RELEASE_TAG" --repo "$env:GH_REPO" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "$env:RELEASE_TAG" @assets --repo "$env:GH_REPO" --clobber
+          } else {
+            gh release create "$env:RELEASE_TAG" @assets --repo "$env:GH_REPO" --verify-tag --title "CameraTweaks $env:RELEASE_TAG" --generate-notes
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Failed to publish release assets." }

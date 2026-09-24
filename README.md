@@ -1,4 +1,4 @@
-# Sniper Elite 3 FreeCamera + FOV
+# Sniper Elite 3 Camera Tweaks 2.0
 
 A DirectX 11 ASI plugin that adds a free camera and an in-game FOV slider to
 Sniper Elite 3. Based on [ermaccer's FreeCamera](https://github.com/ermaccer/SniperElite3.FreeCamera).
@@ -20,8 +20,8 @@ cmake --build build --config Release
 The game is **32-bit**: use `Win32`, not `x64`. The output files are:
 
 ```text
-build/Release/SniperElite3.FreeCamera.asi
-build/Release/SniperElite3.FreeCamera.ini
+build/Release/SniperElite3.CameraTweaks.asi
+build/Release/SniperElite3.CameraTweaks.ini
 ```
 
 Dear ImGui and MinHook are included in `third_party`; no dependency downloads
@@ -29,8 +29,10 @@ are required. Their licenses are included alongside their sources.
 
 ## Install
 
+Download the Win32 package from [Releases](https://github.com/awsms/SniperElite3.CameraTweaks/releases).
+
 1. Close the game.
-2. Copy `SniperElite3.FreeCamera.asi` and `SniperElite3.FreeCamera.ini` into the
+2. Copy `SniperElite3.CameraTweaks.asi` and `SniperElite3.CameraTweaks.ini` into the
    game's **`bin` directory**, next to `SniperElite3.exe`.
 3. Install the **Win32/x86 `dinput8.dll`** from
    [Ultimate ASI Loader](https://github.com/ThirteenAG/Ultimate-ASI-Loader/releases)
@@ -46,9 +48,13 @@ Sniper Elite 3/
   bin/
     SniperElite3.exe
     dinput8.dll
-    SniperElite3.FreeCamera.asi
-    SniperElite3.FreeCamera.ini
+    SniperElite3.CameraTweaks.asi
+    SniperElite3.CameraTweaks.ini
 ```
+
+**Upgrading from FreeCamera:** remove the old `SniperElite3.FreeCamera.asi`
+from the game directory so both plugins do not load together. Rename your old
+`SniperElite3.FreeCamera.ini` to `SniperElite3.CameraTweaks.ini` to keep your settings.
 
 This plugin does not replace `d3d11.dll`. Keep the DLLs and other files
 required by your existing mods in place.
